@@ -407,6 +407,25 @@ jobs:
           os_patch_level: ${{ inputs.os_patch_level }}
           droidspaces_commit: ${{ inputs.droidspaces_commit }}
 
+      - name: lkm4ctr container kernel configs
+        # Upstream lkm4ctr vendor/Kconfig (LKM4CTR_VENDOR_KERNEL) selects these;
+        # NET/TIME namespace unshare() degrades without the native options.
+        # CONFIG_SYSVIPC / CONFIG_POSIX_MQUEUE are deliberately NOT set here:
+        # they change task_struct/user_struct layout, so they may only be
+        # enabled together with the DroidSpaces kABI patches.
+        if: contains(inputs.feature_set, 'LKM4CTR') || inputs.feature_set == 'All'
+        uses: ./.github/actions/set-kernel-config
+        with:
+          config_list: |
+            CONFIG_NAMESPACES=y
+            CONFIG_UTS_NS=y
+            CONFIG_IPC_NS=y
+            CONFIG_PID_NS=y
+            CONFIG_USER_NS=y
+            CONFIG_NET_NS=y
+            CONFIG_CGROUPS=y
+            CONFIG_TIME_NS=y
+
       - name: Apply NTSync Patches
         if: contains(inputs.feature_set, 'NTSync')
         uses: ./.github/actions/ntsync

@@ -29,6 +29,7 @@ Generic kernels built on [Google's GKI sources](https://android.googlesource.com
 - **BPF** — BTF / eBPF / FUSE-BPF
 - **Performance** — incl. NTSync
 - **DroidSpaces** — container runtime
+- **lkm4ctr** — container kernel configs (namespaces, SysV IPC, POSIX mqueue) for [cyanmint/lkm4ctr](https://github.com/cyanmint/lkm4ctr)
 
 > [!TIP]
 > Full documentation: [Wiki](https://github.com/WildKernels/GKI_KernelSU_SUSFS/wiki)

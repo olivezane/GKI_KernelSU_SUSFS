@@ -92,6 +92,7 @@ Kernel-based su and root access management for Android.
 | Feature | Description | Source |
 |---------|-------------|--------|
 | DroidSpaces-OSS | LXC-inspired container runtime for Android/Linux | [ravindu644/Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS) |
+| lkm4ctr | Kernel configs for the out-of-tree lkm4ctr.ko container module (native namespaces, SysV IPC, POSIX mqueue) | [cyanmint/lkm4ctr](https://github.com/cyanmint/lkm4ctr) |
 
 ---
 

@@ -459,6 +459,9 @@ def main() -> int:
         if "net" in feats_on:
             flines2.append("- Networking")
             rlines2.append("- **Networking**")
+        if "lkm4ctr" in feats_on:
+            flines2.append("- lkm4ctr container configs")
+            rlines2.append("- **lkm4ctr container configs**")
         if "ntsync" in feats_on:
             flines2.append("- NTSync")
             rlines2.append("- **NTSync**")
