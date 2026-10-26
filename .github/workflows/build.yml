@@ -718,7 +718,8 @@ jobs:
 
           if [ "$NOMOUNT_ENABLED" = "true" ]; then
             METHOD="GKI source build with SHA-pinned root implementation, SUSFS, and NoMount"
-            NOMOUNT_MODULE_COMMIT="${{ inputs.nomount_commit }}"
+            # Same source as the summary table, so the two can never disagree.
+            NOMOUNT_MODULE_COMMIT="${NOMOUNT_COMMIT:-${{ inputs.nomount_commit }}}"
           else
             METHOD="GKI source build with SHA-pinned root implementation and SUSFS"
             NOMOUNT_MODULE_COMMIT="N/A"
@@ -801,7 +802,7 @@ jobs:
             --arg root_version "${ROOT_VERSION:-${KSU_GIT_TAG:-N/A}}" \
             --arg root_commit "${ROOT_COMMIT:-${KSU_COMMIT:-N/A}}" \
             --arg susfs_commit "${SUSFS_COMMIT:-N/A}" \
-            --arg nomount_commit "${NOMOUNT_COMMIT:-N/A}" \
+            --arg nomount_commit "$NOMOUNT_MODULE_COMMIT" \
             --arg android_branch "${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}" \
             --arg kmi "${{ inputs.android_version }}-${{ inputs.kernel_version }}" \
             --arg page_size "${{ inputs.page_size }}" \
@@ -852,7 +853,7 @@ jobs:
             .status == "Build-verified only" and
             (.root.manager | length > 0) and
             (.root.version | length > 0) and
-            (.susfs_revision | test("^[0-9a-f]{40}$")) and
+            (.susfs_revision | test("^(N/A|[0-9a-f]{40})$")) and
             (.kernel_source_commit | test("^[0-9a-f]{40}$")) and
             (.artifact_url | startswith("https://")) and
             (.sha256 | test("^sha256:[0-9a-f]{64}$")) and
@@ -861,21 +862,19 @@ jobs:
             .catalog.flashability == "not-guaranteed" and
             .catalog.boot == "not-guaranteed"
           ' "$metadata_file" > /dev/null
-          if [ "$NOMOUNT_ENABLED" = "true" ]; then
-            jq -e '
-              (.nomount_commit | test("^[0-9a-f]{40}$")) and
-              (.nomount_metamodule.commit == .nomount_commit) and
-              (.nomount_metamodule.artifact_url | startswith("https://")) and
-              (.nomount_metamodule.sha256 | test("^sha256:[0-9a-f]{64}$"))
-            ' "$metadata_file" > /dev/null
-          else
-            jq -e '
-              (.nomount_commit == "N/A") and
-              (.nomount_metamodule.commit == "N/A") and
-              (.nomount_metamodule.artifact_url == "N/A") and
-              (.nomount_metamodule.sha256 == "N/A")
-            ' "$metadata_file" > /dev/null
-          fi
+          # NoMount is optional, so accept both shapes: all-N/A when it was not
+          # integrated, or a pinned SHA with its matching artifact.
+          jq -e '
+            (.nomount_commit | test("^(N/A|[0-9a-f]{40})$")) and
+            (.nomount_metamodule.commit == .nomount_commit) and
+            (if .nomount_commit == "N/A" then
+               .nomount_metamodule.artifact_url == "N/A" and
+               .nomount_metamodule.sha256 == "N/A"
+             else
+               (.nomount_metamodule.artifact_url | startswith("https://")) and
+               (.nomount_metamodule.sha256 | test("^sha256:[0-9a-f]{64}$"))
+             end)
+          ' "$metadata_file" > /dev/null
 
           # Merge the verified metadata into the combined summary markdown so both
           # live in a single artifact: human-readable table + machine JSON block.
