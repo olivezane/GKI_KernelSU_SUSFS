@@ -25,6 +25,11 @@ show_fdinfo() is in the widened form. The parameter is unused by design (the
 inotify side is what needs `file` for sus_mount path resolution), and the kernel
 does not build with -Wunused-parameter.
 
+The 6.1 patch makes the widening conditional, so the arity is a compile-time
+choice. Mirror that guard on fanotify_fdinfo() as well: when the macro is off
+(NoRoot builds, CONFIG_KSU=n drops the whole SUSFS menu) the narrow variant is
+what compiles, and an unconditionally widened fanotify_fdinfo() is the error.
+
 Idempotent, anchored, fails loudly if the file is in neither expected shape.
 
 Usage: susfs_fdinfo_fanotify_arity.py <kernel/common>
@@ -48,6 +53,11 @@ FAN_3ARG = re.compile(
     r"static void fanotify_fdinfo\(struct seq_file \*m, struct fsnotify_mark \*mark,"
     r"\s*\n?\s*struct file \*file\)"
 )
+# Present when the patch widens show_fdinfo() conditionally instead of always.
+GUARD = "#if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_SUS_KSTAT)"
+NARROW_FAN = "static void fanotify_fdinfo(struct seq_file *m, struct fsnotify_mark *mark)"
+WIDE_FAN = ("static void fanotify_fdinfo(struct seq_file *m, struct fsnotify_mark *mark,\n"
+            "\t\t\t     struct file *file)")
 
 
 def die(msg: str) -> NoReturn:
@@ -75,12 +85,11 @@ def main() -> None:
         print("  fdinfo.c: no 2-argument fanotify_fdinfo() found - nothing to do")
         return
 
-    src = FAN_2ARG.sub(
-        "static void fanotify_fdinfo(struct seq_file *m, struct fsnotify_mark *mark,\n"
-        "\t\t\t     struct file *file)",
-        src,
-        count=1,
-    )
+    if GUARD in src:
+        replacement = f"{GUARD}\n{WIDE_FAN}\n#else\n{NARROW_FAN}\n#endif // {GUARD}"
+    else:
+        replacement = WIDE_FAN
+    src = FAN_2ARG.sub(lambda _: replacement, src, count=1)
     open(path, "w", encoding="utf-8").write(src)
 
     check = open(path, encoding="utf-8").read()
